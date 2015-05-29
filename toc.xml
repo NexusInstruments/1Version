@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Addon Author="Chronosis" APIVersion="10" Name="1Version" Description="Tracks Addon Versions and notifications when a new version is available">
+  <Script Name="libs\SimpleUtils-1.0.lua"/>
+  <Script Name="1Version.lua"/>
+  <Form Name="1Version.xml"/>
+  <Script Name="1Version-UI.lua"/>
+  <Script Name="1Version-Utils.lua"/>
+  <Script Name="1Version-Defaults.lua"/>
+</Addon>

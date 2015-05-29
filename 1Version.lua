@@ -1,0 +1,309 @@
+------------------------------------------------------------------------------------------------
+--  1Version ver. @project-version@
+--  Authored by Chrono Syz -- Entity-US / Wildstar
+--  Build @project-hash@
+--  Copyright (c) Chronosis. All rights reserved
+--
+--  https://github.com/chronosis/1Version
+------------------------------------------------------------------------------------------------
+-- 1Version.lua
+------------------------------------------------------------------------------------------------
+
+require "Window"
+require "GroupLib"
+require "ChatSystemLib"
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion Module Definition
+-----------------------------------------------------------------------------------------------
+local OneVersion = {}
+local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
+
+local addonCRBML = Apollo.GetAddon("MasterLoot")
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion constants
+-----------------------------------------------------------------------------------------------
+local ONEVERSION_CURRENT_VERSION = "1.0.0"
+
+local tDefaultSettings = {
+  version = ONEVERSION_CURRENT_VERSION,
+  debug = false,
+  user = {
+    savedWndLoc = {},
+    isEnabled = true,
+  },
+  options = {
+  }
+}
+
+local tDefaultState = {
+  isOpen = false,
+  windows = {           -- These store windows for lists
+    main = nil,
+    options = nil,
+    addonList = nil
+  },
+  listItems = {         -- These store windows for lists
+    addons = {},
+  },
+  trackedAddons = {}
+}
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion Constructor
+-----------------------------------------------------------------------------------------------
+function OneVersion:new(o)
+  o = o or {}
+  setmetatable(o, self)
+  self.__index = self
+
+  -- Saved and Restored values are stored here.
+  o.settings = shallowcopy(tDefaultSettings)
+  -- Volatile values are stored here. These are impermenant and not saved between sessions
+  o.state = shallowcopy(tDefaultState)
+
+  return o
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion Init
+-----------------------------------------------------------------------------------------------
+function OneVersion:Init()
+  local bHasConfigureFunction = true
+  local strConfigureButtonText = "OneVersion"
+  local tDependencies = {
+    -- "UnitOrPackageName",
+  }
+  Apollo.RegisterAddon(self, bHasConfigureFunction, strConfigureButtonText, tDependencies)
+
+  self.settings = shallowcopy(tDefaultSettings)
+  -- Volatile values are stored here. These are impermenant and not saved between sessions
+  self.state = shallowcopy(tDefaultState)
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnLoad
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnLoad()
+  Apollo.LoadSprites("1VersionSprites.xml")
+
+  self.xmlDoc = XmlDoc.CreateFromFile("1Version.xml")
+  self.xmlDoc:RegisterCallback("OnDocLoaded", self)
+
+  Apollo.RegisterEventHandler("Generic_ToggleOneVersion", "OnToggleOneVersion", self)
+  Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
+
+  -- Setup Comms
+  self.shareChannel = ICCommLib.JoinChannel("OneVersion", ICCommLib.CodeEnumICCommChannelType.Group)
+  self.shareChannel:SetReceivedMessageFunction("OnReceiveAddonInfo", self)
+
+  -- When someone joins the group
+  Apollo.RegisterEventHandler("Group_Add","OnGroupAdd", self)					-- ( name )
+  Apollo.RegisterEventHandler("Group_Join","OnGroupJoin", self)				-- ()
+
+  -- When an addon reports the version
+  Apollo.RegisterEventHandler("OneVersion_ReportAddonInfo",	"OnAddonReportInfo", self)
+
+  -- Report Self
+  Event_FireGenericEvent("OneVersion_ReportAddonInfo", "OneVersion", "Addon", 1, 0, 0)
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnDocLoaded
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnDocLoaded()
+  if self.xmlDoc == nil then
+    return
+  end
+
+  self.state.windows.main = Apollo.LoadForm(self.xmlDoc, "OneVersionWindow", nil, self)
+  self.state.windows.addonList = self.state.windows.main:FindChild("ItemList")
+
+  -- Initialize all the UI Items
+  self:RebuildAddonListItems()
+  self.state.windows.main:Show(false)
+
+  Apollo.RegisterSlashCommand("verone", "OnSlashCommand", self)
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnSlashCommand
+-----------------------------------------------------------------------------------------------
+-- Handle slash commands
+function OneVersion:OnSlashCommand(cmd, params)
+  args = params:lower():split("[ ]+")
+
+  if args[1] == "debug" then
+    self:ToggleDebug()
+  elseif args[1] == "show" then
+    self.state.windows.main:Show(true)
+  elseif args[1] == "defaults" then
+    self:LoadDefaults()
+  else
+    Utils:cprint("OneVersion v" .. self.settings.version)
+    Utils:cprint("Usage:  /verone <command>")
+    Utils:cprint("====================================")
+    Utils:cprint("   show           Open Rules Window")
+    Utils:cprint("   debug          Toggle Debug")
+    Utils:cprint("   defaults       Loads default sample rules in current ruleset")
+  end
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnInterfaceMenuListHasLoaded
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnInterfaceMenuListHasLoaded()
+  Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "OneVersion", {"Generic_ToggleOneVersion", "", nil})
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion ProcessOptions
+-----------------------------------------------------------------------------------------------
+function OneVersion:ProcessOptions()
+
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnReceiveAddonInfo
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnReceiveAddonInfo(chan, msg)
+  if self.state.debug == true then
+    Utils:debug(msg)
+  end
+
+  -- Read addon information
+  local name,addon = self:GetAddonInfoFromMessage(msg)
+
+  -- Update addon and check/compare version info
+  -- Only update addons we're already watching
+  if self.state.trackedAddons[addon.label] then
+    self:UpdateOther(self.state.trackedAddons[addon.label].reported, addon)
+    self.state.trackedAddons[addon.label].upgrade = self:RequireUpgrade(self.state.trackedAddons[addon.label].mine, self.state.trackedAddons[addon.label].reported)
+  end
+  self:RebuildAddonListItems()
+end
+
+function OneVersion:UpdateOther(mine, other)
+  if other.major > mine.major then
+    mine.major = other.major
+    mine.minor = other.minor
+    mine.patch = other.patch
+  elseif (other.major == mine.major and other.minor > mine.minor) then
+    mine.minor = other.minor
+    mine.patch = other.patch
+  elseif (other.major == mine.major and other.minor == mine.minor and other.patch > mine.patch) then
+    mine.patch = other.patch
+  end
+end
+
+
+function OneVersion:RequireUpgrade(mine, other)
+  if mine.major < other.major then
+    return true
+  end
+
+  if mine.minor < other.minor then
+    return true
+  end
+
+  if mine.patch < other.patch then
+    return true
+  end
+
+  return false
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnReceiveAddonInfo
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnGroupAdd( name )
+  -- Broadcast a message to the channel announcing all addon versions.
+  self:BroadcastAddons(name)
+end
+
+function OneVersion:OnGroupJoin() -- I joined a group
+  -- Broadcast a message to the channel announcing all addon versions.
+  local name = GameLib.GetPlayerUnit():GetName()
+  self:BroadcastAddons(name)
+end
+
+function OneVersion:BroadcastAddons(name)
+  for key,value in pairs(self.state.trackedAddons) do
+    msg = AddonInfoToMessage(name, value)
+    self.shareChannel:SendMessage(msg)
+  end
+end
+
+function OneVersion:GetAddonInfoFromMessage(msg)
+  local parts = msg:split("|")
+  local t = {
+    label = parts[2],
+    type = parts[3],
+    major = parts[4],
+    minor = parts[5],
+    patch = parts[6]
+  }
+  return parts[1], t
+end
+
+function OneVersion:AddonInfoToMessage(name,addonInfo)
+  return name .. "|" .. addonInfo.label .. "|" .. addonInfo.type .. "|" .. addonInfo.mine.major .. "|" .. addonInfo.mine.minor .. "|" .. addonInfo.mine.patch
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion OnAddonReportInfo
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnAddonReportInfo(name, type, major, minor, patch)
+  local addonInfo = self:GetBaseAddonInfo()
+  addonInfo.label = name
+  addonInfo.type = type
+  addonInfo.mine.major = major
+  addonInfo.reported.major = major
+  addonInfo.mine.minor = minor
+  addonInfo.reported.minor = minor
+  addonInfo.mine.patch = patch
+  addonInfo.reported.patch = patch
+  addonInfo.upgrade = false
+  self.state.trackedAddons[name] = addonInfo
+end
+
+-----------------------------------------------------------------------------------------------
+-- Save/Restore functionality
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnSave(eType)
+  if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then return end
+
+  return deepcopy(self.settings)
+end
+
+function OneVersion:OnRestore(eType, tSavedData)
+  if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then return end
+
+  if tSavedData and tSavedData.user then
+    -- Copy the settings wholesale
+    self.settings = deepcopy(tSavedData)
+
+    -- Fill in any missing values from the default options
+    -- This Protects us from configuration additions in the future versions
+    for key, value in pairs(tDefaultSettings) do
+      if self.settings[key] == nil then
+        self.settings[key] = deepcopy(tDefaultSettings[key])
+      end
+    end
+
+    -- This section is for converting between versions that saved data differently
+
+    -- Now that we've turned the save data into the most recent version, set it
+    self.settings.user.version = ONEVERSION_CURRENT_VERSION
+
+  else
+    self.tConfig = deepcopy(tDefaultOptions)
+  end
+end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion Instance
+-----------------------------------------------------------------------------------------------
+local OneVersionInst = OneVersion:new()
+OneVersionInst:Init()
