@@ -15,6 +15,7 @@ require "GameLib"
 
 local OneVersion = Apollo.GetAddon("1Version")
 local Info = Apollo.GetAddonInfo("1Version")
+local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
 
 ---------------------------------------------------------------------------------------------------
 -- OneVersion General UI Functions
@@ -112,10 +113,18 @@ function OneVersion:RefreshUI()
   self.state.windows.main:FindChild("EnabledButton"):SetCheck(self.settings.user.enabled)
 
   -- Sort List Items
-  self.state.windows.ruleList:ArrangeChildrenVert()
-  self.state.windows.ruleSetList:ArrangeChildrenVert()
-  if self.state.windows.assigneeList ~= nil then
-    self.state.windows.assigneeList:ArrangeChildrenVert()
+  self.state.windows.addonList:ArrangeChildrenVert()
+end
+
+function OneVersion:ShowAlert()
+  self.state.windows.alert = Apollo.LoadForm(self.xmlDoc, "AlertWindow", nil, self)
+end
+
+function OneVersion:OnOpenAlerts()
+  if self.state.isOpen ~= true then
+    self.state.windows.main:Show(true)
+    self.state.windows.alert:Show(false)
+    self.state.windows.alert:Destroy()
   end
 end
 
@@ -140,7 +149,6 @@ function OneVersion:AddAddonListItem(index, item)
   wnd:FindChild("Reported"):FindChild("Minor"):SetText(tostring(item.reported.minor or 0))
   wnd:FindChild("Reported"):FindChild("Patch"):SetText(tostring(item.reported.patch or 0))
   wnd:FindChild("Upgrade"):Show(item.upgrade)
-
   table.insert(self.state.listItems.addons, wnd)
 end
 
@@ -148,7 +156,7 @@ function OneVersion:RebuildAddonListItems()
   local vScrollPos = self.state.windows.addonList:GetVScrollPos()
   self:SaveLocation()
   self:ClearAddonListItem()
-  for idx,item in ipairs(self.state.trackedAddons) do
+  for key,item in pairs(self.state.trackedAddons) do
     self:AddAddonListItem(idx, item)
   end
   self.state.windows.addonList:SetVScrollPos(vScrollPos)

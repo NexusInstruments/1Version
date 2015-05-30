@@ -24,12 +24,16 @@ local addonCRBML = Apollo.GetAddon("MasterLoot")
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local ONEVERSION_CURRENT_VERSION = "1.0.0"
+
+local MajorVersion = 1
+local MinorVersion = 0
+local PatchVersion = 0
+local ONEVERSION_CURRENT_VERSION = "" .. tostring(MajorVersion) .. "." .. tostring(MinorVersion) .. "." .. tostring(PatchVersion)
 
 local tDefaultSettings = {
   version = ONEVERSION_CURRENT_VERSION,
-  debug = false,
   user = {
+    debug = false,
     savedWndLoc = {},
     isEnabled = true,
   },
@@ -42,7 +46,8 @@ local tDefaultState = {
   windows = {           -- These store windows for lists
     main = nil,
     options = nil,
-    addonList = nil
+    addonList = nil,
+    alert = nil
   },
   listItems = {         -- These store windows for lists
     addons = {},
@@ -104,9 +109,6 @@ function OneVersion:OnLoad()
 
   -- When an addon reports the version
   Apollo.RegisterEventHandler("OneVersion_ReportAddonInfo",	"OnAddonReportInfo", self)
-
-  -- Report Self
-  Event_FireGenericEvent("OneVersion_ReportAddonInfo", "OneVersion", "Addon", 1, 0, 0)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -119,12 +121,9 @@ function OneVersion:OnDocLoaded()
 
   self.state.windows.main = Apollo.LoadForm(self.xmlDoc, "OneVersionWindow", nil, self)
   self.state.windows.addonList = self.state.windows.main:FindChild("ItemList")
-
-  -- Initialize all the UI Items
-  self:RebuildAddonListItems()
   self.state.windows.main:Show(false)
 
-  Apollo.RegisterSlashCommand("verone", "OnSlashCommand", self)
+  Apollo.RegisterSlashCommand("onever", "OnSlashCommand", self)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -142,11 +141,11 @@ function OneVersion:OnSlashCommand(cmd, params)
     self:LoadDefaults()
   else
     Utils:cprint("OneVersion v" .. self.settings.version)
-    Utils:cprint("Usage:  /verone <command>")
+    Utils:cprint("Usage:  /onever <command>")
     Utils:cprint("====================================")
     Utils:cprint("   show           Open Rules Window")
     Utils:cprint("   debug          Toggle Debug")
-    Utils:cprint("   defaults       Loads default sample rules in current ruleset")
+    --Utils:cprint("   defaults       Loads defaults")
   end
 end
 
@@ -154,7 +153,10 @@ end
 -- OneVersion OnInterfaceMenuListHasLoaded
 -----------------------------------------------------------------------------------------------
 function OneVersion:OnInterfaceMenuListHasLoaded()
-  Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "OneVersion", {"Generic_ToggleOneVersion", "", nil})
+  Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "OneVersion", {"Generic_ToggleOneVersion", "", "OneVersionSprites:OneIcon"})
+
+  -- Report Self
+  Event_FireGenericEvent("OneVersion_ReportAddonInfo", "OneVersion", MajorVersion, MinorVersion, PatchVersion, false)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -168,18 +170,27 @@ end
 -- OneVersion OnReceiveAddonInfo
 -----------------------------------------------------------------------------------------------
 function OneVersion:OnReceiveAddonInfo(chan, msg)
-  if self.state.debug == true then
+  if self.settings.user.debug == true then
     Utils:debug(msg)
   end
 
   -- Read addon information
   local name,addon = self:GetAddonInfoFromMessage(msg)
+  local alertRequired = false
 
   -- Update addon and check/compare version info
   -- Only update addons we're already watching
   if self.state.trackedAddons[addon.label] then
     self:UpdateOther(self.state.trackedAddons[addon.label].reported, addon)
-    self.state.trackedAddons[addon.label].upgrade = self:RequireUpgrade(self.state.trackedAddons[addon.label].mine, self.state.trackedAddons[addon.label].reported)
+    local upgrade = self:RequireUpgrade(self.state.trackedAddons[addon.label].mine, self.state.trackedAddons[addon.label].reported)
+    self.state.trackedAddons[addon.label].upgrade = upgrade
+    if upgrade then
+      alertRequired = true
+    end
+
+    if alertRequired and self.state.windows.alert == nil then
+      self:ShowAlert()
+    end
   end
   self:RebuildAddonListItems()
 end
@@ -196,7 +207,6 @@ function OneVersion:UpdateOther(mine, other)
     mine.patch = other.patch
   end
 end
-
 
 function OneVersion:RequireUpgrade(mine, other)
   if mine.major < other.major then
@@ -230,7 +240,7 @@ end
 
 function OneVersion:BroadcastAddons(name)
   for key,value in pairs(self.state.trackedAddons) do
-    msg = AddonInfoToMessage(name, value)
+    msg = self:AddonInfoToMessage(name, value)
     self.shareChannel:SendMessage(msg)
   end
 end
@@ -254,8 +264,20 @@ end
 -----------------------------------------------------------------------------------------------
 -- OneVersion OnAddonReportInfo
 -----------------------------------------------------------------------------------------------
-function OneVersion:OnAddonReportInfo(name, type, major, minor, patch)
+function OneVersion:OnAddonReportInfo(name, major, minor, patch, isLib)
   local addonInfo = self:GetBaseAddonInfo()
+  local type = ""
+
+  if self.settings.user.debug == true then
+    Utils:debug( name .. "|" .. major .. "|" .. minor .. "|" .. patch .. "|" .. tostring(isLib))
+  end
+
+  if isLib and isLib == true then
+    type = "Library"
+  else
+    type = "Add-On"
+  end
+
   addonInfo.label = name
   addonInfo.type = type
   addonInfo.mine.major = major
@@ -265,7 +287,11 @@ function OneVersion:OnAddonReportInfo(name, type, major, minor, patch)
   addonInfo.mine.patch = patch
   addonInfo.reported.patch = patch
   addonInfo.upgrade = false
+
   self.state.trackedAddons[name] = addonInfo
+
+  self:RebuildAddonListItems()
+  self:BroadcastAddons(GameLib.GetPlayerUnit():GetName())
 end
 
 -----------------------------------------------------------------------------------------------

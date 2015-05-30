@@ -78,8 +78,13 @@ function SimpleUtils:cprint(string)
 end
 
 function SimpleUtils:debug(string)
+  debugprint(string)
+end
+
+function debugprint(string)
   ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_Debug, string, "")
 end
+
 
 function SimpleUtils:pprint(string)
   for _,channel in pairs(ChatSystemLib.GetChannels()) do
@@ -96,12 +101,12 @@ function vardump (tbl, indent)
   for k, v in pairs(tbl) do
     formatting = string.rep("  ", indent) .. k .. ": "
     if type(v) == 'table' then
-      debug(formatting)
+      debugprint(formatting)
       vardump(v, indent+1)
     elseif type(v) == 'boolean' then
-      debug(formatting .. tostring(v))
+      debugprint(formatting .. tostring(v))
     else
-      debug(formatting .. v)
+      debugprint(formatting .. v)
     end
   end
 end

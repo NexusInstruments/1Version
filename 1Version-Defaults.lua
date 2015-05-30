@@ -38,5 +38,5 @@ function OneVersion:LoadDefaults()
 end
 
 function OneVersion:GetBaseAddonInfo()
-  return shallowcopy(tBaseAddonInfo)
+  return deepcopy(tBaseAddonInfo)
 end
