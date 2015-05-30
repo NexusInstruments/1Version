@@ -19,14 +19,12 @@ require "ChatSystemLib"
 local OneVersion = {}
 local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
 
-local addonCRBML = Apollo.GetAddon("MasterLoot")
-
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
 
-local MajorVersion = 1
-local MinorVersion = 0
+local MajorVersion = 0
+local MinorVersion = 5
 local PatchVersion = 0
 local ONEVERSION_CURRENT_VERSION = "" .. tostring(MajorVersion) .. "." .. tostring(MinorVersion) .. "." .. tostring(PatchVersion)
 
