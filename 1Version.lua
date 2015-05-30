@@ -272,7 +272,7 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, isLib)
     Utils:debug( name .. "|" .. major .. "|" .. minor .. "|" .. patch .. "|" .. tostring(isLib))
   end
 
-  if isLib and isLib == true then
+  if isLib ~= nil and isLib == true then
     type = "Library"
   else
     type = "Add-On"
