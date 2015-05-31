@@ -29,6 +29,11 @@ function OneVersion:ToggleDebug()
   end
 end
 
+function OneVersion:BuildVersionString(major, minor, patch)
+  return "" .. tostring(major) .. "." .. tostring(minor) .. "." .. tostring(patch)
+end
+
+
 function OneVersion:PrintParty(str)
   Utils:pprint("[OneVersion]: " .. str)
 end

@@ -24,7 +24,7 @@ local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
 -----------------------------------------------------------------------------------------------
 
 local MajorVersion = 0
-local MinorVersion = 5
+local MinorVersion = 6
 local PatchVersion = 0
 local ONEVERSION_CURRENT_VERSION = "" .. tostring(MajorVersion) .. "." .. tostring(MinorVersion) .. "." .. tostring(PatchVersion)
 
@@ -194,28 +194,28 @@ function OneVersion:OnReceiveAddonInfo(chan, msg)
 end
 
 function OneVersion:UpdateOther(mine, other)
-  if other.major > mine.major then
+  if tonumber(other.major) > tonumber(mine.major) then
     mine.major = other.major
     mine.minor = other.minor
     mine.patch = other.patch
-  elseif (other.major == mine.major and other.minor > mine.minor) then
+  elseif (tonumber(other.major) == tonumber(mine.major) and tonumber(other.minor) > tonumber(mine.minor)) then
     mine.minor = other.minor
     mine.patch = other.patch
-  elseif (other.major == mine.major and other.minor == mine.minor and other.patch > mine.patch) then
+  elseif (tonumber(other.major) == tonumber(mine.major) and tonumber(other.minor) == tonumber(mine.minor) and tonumber(other.patch) > tonumber(mine.patch)) then
     mine.patch = other.patch
   end
 end
 
 function OneVersion:RequireUpgrade(mine, other)
-  if mine.major < other.major then
+  if tonumber(mine.major) < tonumber(other.major) then
     return true
   end
 
-  if mine.minor < other.minor then
+  if tonumber(mine.minor) < tonumber(other.minor) then
     return true
   end
 
-  if mine.patch < other.patch then
+  if tonumber(mine.patch) < tonumber(other.patch) then
     return true
   end
 
