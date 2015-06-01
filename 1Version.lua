@@ -23,8 +23,8 @@ local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
 
-local MajorVersion = 0
-local MinorVersion = 6
+local MajorVersion = 1
+local MinorVersion = 0
 local PatchVersion = 0
 local ONEVERSION_CURRENT_VERSION = "" .. tostring(MajorVersion) .. "." .. tostring(MinorVersion) .. "." .. tostring(PatchVersion)
 
@@ -32,8 +32,11 @@ local tDefaultSettings = {
   version = ONEVERSION_CURRENT_VERSION,
   user = {
     debug = false,
-    savedWndLoc = {},
-    isEnabled = true,
+    unlocked = false
+  },
+  positions = {
+    main = nil,
+    alert = nil
   },
   options = {
   }
@@ -41,11 +44,13 @@ local tDefaultSettings = {
 
 local tDefaultState = {
   isOpen = false,
+  isAlerted = false,
   windows = {           -- These store windows for lists
     main = nil,
     options = nil,
     addonList = nil,
-    alert = nil
+    alert = nil,
+    moveWindow = nil
   },
   listItems = {         -- These store windows for lists
     addons = {},
@@ -119,9 +124,17 @@ function OneVersion:OnDocLoaded()
 
   self.state.windows.main = Apollo.LoadForm(self.xmlDoc, "OneVersionWindow", nil, self)
   self.state.windows.addonList = self.state.windows.main:FindChild("ItemList")
+
+  self.state.windows.alert = Apollo.LoadForm(self.xmlDoc, "AlertWindow", nil, self)
+  self.state.windows.moveWindow = self.state.windows.alert:FindChild("UnlockInfo")
+
   self.state.windows.main:Show(false)
+  self.state.windows.alert:Show(false)
 
   Apollo.RegisterSlashCommand("onever", "OnSlashCommand", self)
+
+  -- Restore positions and junk
+  self:RefreshUI()
 end
 
 -----------------------------------------------------------------------------------------------
@@ -134,7 +147,7 @@ function OneVersion:OnSlashCommand(cmd, params)
   if args[1] == "debug" then
     self:ToggleDebug()
   elseif args[1] == "show" then
-    self.state.windows.main:Show(true)
+    self:OnToggleOneVersion()
   elseif args[1] == "defaults" then
     self:LoadDefaults()
   else
@@ -187,7 +200,9 @@ function OneVersion:OnReceiveAddonInfo(chan, msg)
     end
 
     if alertRequired and self.state.windows.alert == nil then
+      self.state.isAlerted = alertRequired
       self:ShowAlert()
+      self:ProcessLock()
     end
   end
   self:RebuildAddonListItems()
@@ -319,7 +334,7 @@ function OneVersion:OnRestore(eType, tSavedData)
     -- This section is for converting between versions that saved data differently
 
     -- Now that we've turned the save data into the most recent version, set it
-    self.settings.user.version = ONEVERSION_CURRENT_VERSION
+    self.settings.version = ONEVERSION_CURRENT_VERSION
 
   else
     self.tConfig = deepcopy(tDefaultOptions)

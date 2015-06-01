@@ -32,7 +32,8 @@ function OneVersion:OnToggleOneVersion()
 end
 
 function OneVersion:SaveLocation()
-  self.settings.user.savedWndLoc = self.state.windows.main:GetLocation():ToTable()
+  self.settings.positions.main = self.state.windows.main:GetLocation():ToTable()
+  self.settings.positions.alert = self.state.windows.alert:GetLocation():ToTable()
 end
 
 function OneVersion:CloseMain()
@@ -50,14 +51,6 @@ end
 
 function OneVersion:OnOneVersionClosed( wndHandler, wndControl )
   self.state.isOpen = false
-end
-
-function OneVersion:OnEnableChecked( wndHandler, wndControl, eMouseButton )
-  self.settings.user.enabled = true
-end
-
-function OneVersion:OnEnableUnchecked( wndHandler, wndControl, eMouseButton )
-  self.settings.user.enabled = false
 end
 
 -----------------------------------------------------------------------------------------------
@@ -104,9 +97,15 @@ end
 ---------------------------------------------------------------------------------------------------
 function OneVersion:RefreshUI()
   -- Location Restore
-  if self.settings.user.savedWndLoc then
-    locSavedLoc = WindowLocation.new(self.settings.user.savedWndLoc)
+  if self.settings.positions.main ~= nil and self.settings.positions.main ~= {} then
+    locSavedLoc = WindowLocation.new(self.settings.positions.main)
     self.state.windows.main:MoveToLocation(locSavedLoc)
+  end
+
+  -- Location Restore
+  if self.settings.positions.alert ~= nil and self.settings.positions.alert ~= {} then
+    local locSavedLoc = WindowLocation.new(self.settings.positions.alert)
+    self.state.windows.alert:MoveToLocation(locSavedLoc)
   end
 
   -- Set Enabled Flag
@@ -117,15 +116,53 @@ function OneVersion:RefreshUI()
 end
 
 function OneVersion:ShowAlert()
-  self.state.windows.alert = Apollo.LoadForm(self.xmlDoc, "AlertWindow", nil, self)
+  self.state.windows.alert:Invoke()
+
+  -- Location Restore
+  if self.settings.positions.alert ~= nil and self.settings.positions.alert ~= {} then
+    local locSavedLoc = WindowLocation.new(self.settings.positions.alert)
+    self.state.windows.alert:MoveToLocation(locSavedLoc)
+  end
+end
+
+function OneVersion:CloseAlert()
+  self.state.windows.alert:Close()
+end
+
+function OneVersion:ProcessLock()
+  if self.settings.user.unlocked == true then
+    self:ShowAlert()
+    self.state.windows.alert:AddStyle("Moveable")
+    self.state.windows.alert:FindChild("Button"):Enable(false)
+    self.state.windows.alert:AddStyle("Moveable")
+    self.state.windows.alert:SetTooltip("-Drag to Move-")
+  else
+    self.state.windows.alert:RemoveStyle("Moveable")
+    self.state.windows.alert:FindChild("Button"):Enable(true)
+    self.state.windows.alert:SetTooltip("-OneVersion Alert-")
+    if self.state.isAlerted == false then
+      self:CloseAlert()
+    end
+  end
+  self.state.windows.moveWindow:Show(self.settings.user.unlocked)
+end
+
+function OneVersion:OnUnlockCheck( wndHandler, wndControl, eMouseButton )
+  local checked = wndControl:IsChecked()
+  self.settings.user.unlocked = checked
+  self:ProcessLock()
+end
+
+function OneVersion:OnAlertMove( wndHandler, wndControl, nOldLeft, nOldTop, nOldRight, nOldBottom )
+  self:SaveLocation()
 end
 
 function OneVersion:OnOpenAlerts()
   if self.state.isOpen ~= true then
     self.state.windows.main:Show(true)
-    self.state.windows.alert:Show(false)
-    self.state.windows.alert:Destroy()
   end
+  self.state.isAlerted = false
+  self:CloseAlert()
 end
 
 ---------------------------------------------------------------------------------------------------

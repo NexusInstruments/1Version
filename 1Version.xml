@@ -22,8 +22,8 @@
             <Event Name="ButtonSignal" Function="OnConfigure"/>
         </Control>
         <Control Class="Button" Base="BK3:btnHolo_Check" Font="DefaultButton" ButtonType="Check" RadioGroup="" LAnchorPoint="0" LAnchorOffset="19" TAnchorPoint="1" TAnchorOffset="-47" RAnchorPoint="0" RAnchorOffset="205" BAnchorPoint="1" BAnchorOffset="-21" DT_VCENTER="1" DT_CENTER="1" BGColor="UI_BtnBGDefault" TextColor="UI_BtnTextDefault" NormalTextColor="UI_BtnTextDefault" PressedTextColor="UI_BtnTextDefault" FlybyTextColor="UI_BtnTextDefault" PressedFlybyTextColor="UI_BtnTextDefault" DisabledTextColor="UI_BtnTextDefault" TooltipType="OnCursor" Name="EnabledButton" TooltipColor="" Text="Unlock Alert Frame" TextId="" Tooltip="" Visible="1">
-            <Event Name="ButtonCheck" Function="OnEnableChecked"/>
-            <Event Name="ButtonUncheck" Function="OnEnableUnchecked"/>
+            <Event Name="ButtonCheck" Function="OnUnlockCheck"/>
+            <Event Name="ButtonUncheck" Function="OnUnlockCheck"/>
         </Control>
         <Event Name="WindowClosed" Function="OnOneVersionClose"/>
     </Form>
@@ -45,9 +45,13 @@
         <Control Class="Window" LAnchorPoint="0" LAnchorOffset="295" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="0" RAnchorOffset="415" BAnchorPoint="1" BAnchorOffset="0" RelativeToClient="1" Font="CRB_InterfaceMedium_B" Text="1.0.1" BGColor="UI_WindowBGDefault" TextColor="ffccccdd" Template="Default" TooltipType="OnCursor" Name="Reported" TooltipColor="" DT_CENTER="1" DT_VCENTER="1" TextId=""/>
         <Control Class="Window" LAnchorPoint="1" LAnchorOffset="-35" TAnchorPoint="0" TAnchorOffset="4" RAnchorPoint="1" RAnchorOffset="-10" BAnchorPoint="1" BAnchorOffset="-1" RelativeToClient="1" Font="Default" Text="" BGColor="UI_WindowBGDefault" TextColor="UI_WindowTextDefault" Template="Default" TooltipType="OnCursor" Name="Upgrade" TooltipColor="" Tooltip="Addon is out of date" TooltipId="" Picture="1" IgnoreMouse="1" Sprite="BK3:UI_BK3_StoryPanelAlert_Icon"/>
     </Form>
-    <Form Class="Window" LAnchorPoint="0" LAnchorOffset="10" TAnchorPoint="0" TAnchorOffset="10" RAnchorPoint="0" RAnchorOffset="60" BAnchorPoint="0" BAnchorOffset="60" RelativeToClient="1" Font="Default" Text="" BGColor="UI_WindowBGDefault" TextColor="UI_WindowTextDefault" Template="Default" TooltipType="OnCursor" Name="AlertWindow" Border="0" Picture="1" SwallowMouseClicks="1" Moveable="1" Escapable="0" Overlapped="1" TooltipColor="" Sprite="" Tooltip="">
+    <Form Class="Window" LAnchorPoint="0" LAnchorOffset="10" TAnchorPoint="0" TAnchorOffset="10" RAnchorPoint="0" RAnchorOffset="60" BAnchorPoint="0" BAnchorOffset="60" RelativeToClient="1" Font="Default" Text="" BGColor="UI_WindowBGDefault" TextColor="UI_WindowTextDefault" Template="Default" TooltipType="OnCursor" Name="AlertWindow" Border="0" Picture="1" SwallowMouseClicks="1" Moveable="0" Escapable="0" Overlapped="1" TooltipColor="" Sprite="CRB_Basekit:kitInnerFrame_RuneSigilSlot_Square" Tooltip="-OneVersion Alert-" TooltipId="">
+        <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="1" BAnchorOffset="0" RelativeToClient="1" Font="Default" Text="" BGColor="40ffffff" TextColor="UI_WindowTextDefault" Template="Default" TooltipType="OnCursor" Name="UnlockInfo" TooltipColor="" TextId="" DT_CENTER="1" DT_VCENTER="1" Sprite="BasicSprites:LineFill" Picture="1" IgnoreMouse="1" Border="1" UseRadialClipping="0" Overlapped="1" TestAlpha="0" NewWindowDepth="1" Tooltip="" HideInEditor="0">
+            <Pixie LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="1" BAnchorOffset="0" Sprite="BK3:UI_BK3_ItemQualityBlue" BGColor="white" TextColor="black" Rotation="0" Font="Default" Text=""/>
+        </Control>
         <Control Class="Button" Base="ClientSprites:sprItem_NewQuest" Font="DefaultButton" ButtonType="PushButton" RadioGroup="" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="1" BAnchorOffset="0" DT_VCENTER="1" DT_CENTER="1" BGColor="UI_BtnBGDefault" TextColor="UI_BtnTextDefault" NormalTextColor="UI_BtnTextDefault" PressedTextColor="UI_BtnTextDefault" FlybyTextColor="UI_BtnTextDefault" PressedFlybyTextColor="UI_BtnTextDefault" DisabledTextColor="UI_BtnTextDefault" TooltipType="OnCursor" Name="Button" TooltipColor="" Sprite="ClientSprites:sprItem_NewQuest">
             <Event Name="ButtonSignal" Function="OnOpenAlerts"/>
         </Control>
+        <Event Name="WindowMove" Function="OnAlertMove"/>
     </Form>
 </Forms>
