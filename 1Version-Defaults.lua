@@ -23,12 +23,14 @@ local tBaseAddonInfo = {
   mine = {
     major = 0,
     minor = 0,
-    patch = 0
+    patch = 0,
+    suffix = 0
   },
   reported = {
     major = 0,
     minor = 0,
-    patch = 0
+    patch = 0,
+    suffix = 0
   },
   upgrade = false
 }

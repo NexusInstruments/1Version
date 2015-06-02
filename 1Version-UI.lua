@@ -175,12 +175,24 @@ end
 
 function OneVersion:AddAddonListItem(index, item)
   local wnd = Apollo.LoadForm(self.xmlDoc, "AddonListItem", self.state.windows.addonList, self)
+  local mine = {
+    major = (item.mine.major or 0),
+    minor = (item.mine.minor or 0),
+    patch = (item.mine.patch or 0),
+    suffix = (item.mine.suffix or 0)
+  }
+  local reported = {
+    major = (item.reported.major or 0),
+    minor = (item.reported.minor or 0),
+    patch = (item.reported.patch or 0),
+    suffix = (item.reported.suffix or 0)
+  }
   wnd:SetData(index)
   -- Populate List Items fields from the item data
   wnd:FindChild("Type"):SetText(item.type)
   wnd:FindChild("Label"):SetText(item.label)
-  wnd:FindChild("Mine"):SetText(self:BuildVersionString((item.mine.major or 0), (item.mine.minor or 0), (item.mine.patch or 0)))
-  wnd:FindChild("Reported"):SetText(self:BuildVersionString((item.reported.major or 0), (item.reported.minor or 0), (item.reported.patch or 0)))
+  wnd:FindChild("Mine"):SetText(self:BuildVersionString(mine.major, mine.minor, mine.patch, mine.suffix))
+  wnd:FindChild("Reported"):SetText(self:BuildVersionString(reported.major, reported.minor, reported.patch, reported.suffix))
   wnd:FindChild("Upgrade"):Show(item.upgrade)
   table.insert(self.state.listItems.addons, wnd)
 end

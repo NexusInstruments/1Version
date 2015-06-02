@@ -20,13 +20,77 @@ local OneVersion = {}
 local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
 
 -----------------------------------------------------------------------------------------------
+-- OneVersion Enums
+-----------------------------------------------------------------------------------------------
+OneVersion.CodeEnumAddonSuffixLevel = {
+  Alpha = -2,
+  Beta = -1,
+  None = 0,
+  LetterA = 1,
+  LetterB = 2,
+  LetterC = 3,
+  LetterD = 4,
+  LetterE = 5,
+  LetterF = 6,
+  LetterG = 7,
+  LetterH = 8,
+  LetterI = 9,
+  LetterJ = 10,
+  LetterK = 11,
+  LetterL = 12,
+  LetterM = 13,
+  LetterN = 14,
+  LetterO = 15,
+  LetterP = 16,
+  LetterQ = 17,
+  LetterR = 18,
+  LetterS = 19,
+  LetterT = 20,
+  LetterU = 21,
+  LetterV = 22,
+  LetterW = 23,
+  LetterX = 24,
+  LetterY = 25,
+  LetterZ = 26
+}
+
+OneVersion.CodeEnumAddonSuffixMap = {
+  [-2] = "α",
+  [-1] = "β",
+  [0] = "",
+  [1] = "a",
+  [2] = "b",
+  [3] = "c",
+  [4] = "d",
+  [5] = "e",
+  [6] = "f",
+  [7] = "g",
+  [8] = "h",
+  [9] = "i",
+  [10] = "j",
+  [11] = "k",
+  [12] = "l",
+  [13] = "m",
+  [14] = "n",
+  [15] = "o",
+  [16] = "p",
+  [17] = "q",
+  [18] = "r",
+  [19] = "s",
+  [20] = "t",
+  [21] = "u",
+  [22] = "v",
+  [23] = "w",
+  [24] = "x",
+  [25] = "y",
+  [26] = "z"
+}
+
+-----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-
-local MajorVersion = 1
-local MinorVersion = 0
-local PatchVersion = 0
-local ONEVERSION_CURRENT_VERSION = "" .. tostring(MajorVersion) .. "." .. tostring(MinorVersion) .. "." .. tostring(PatchVersion)
+local Major, Minor, Patch, Suffix = 1, 1, 0, 0
+local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
   version = ONEVERSION_CURRENT_VERSION,
@@ -58,6 +122,7 @@ local tDefaultState = {
   trackedAddons = {}
 }
 
+
 -----------------------------------------------------------------------------------------------
 -- OneVersion Constructor
 -----------------------------------------------------------------------------------------------
@@ -86,7 +151,7 @@ function OneVersion:Init()
   Apollo.RegisterAddon(self, bHasConfigureFunction, strConfigureButtonText, tDependencies)
 
   self.settings = shallowcopy(tDefaultSettings)
-  -- Volatile values are stored here. These are impermenant and not saved between sessions
+  -- Volatile values are stored here. These are impermanent and not saved between sessions
   self.state = shallowcopy(tDefaultState)
 end
 
@@ -167,7 +232,7 @@ function OneVersion:OnInterfaceMenuListHasLoaded()
   Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "OneVersion", {"Generic_ToggleOneVersion", "", "OneVersionSprites:OneIcon"})
 
   -- Report Self
-  Event_FireGenericEvent("OneVersion_ReportAddonInfo", "OneVersion", MajorVersion, MinorVersion, PatchVersion, false)
+  Event_FireGenericEvent("OneVersion_ReportAddonInfo", "OneVersion", Major, Minor, Patch, Suffix, false)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -213,11 +278,16 @@ function OneVersion:UpdateOther(mine, other)
     mine.major = other.major
     mine.minor = other.minor
     mine.patch = other.patch
+    mine.suffix = other.suffix
   elseif (tonumber(other.major) == tonumber(mine.major) and tonumber(other.minor) > tonumber(mine.minor)) then
     mine.minor = other.minor
     mine.patch = other.patch
+    mine.suffix = other.suffix
   elseif (tonumber(other.major) == tonumber(mine.major) and tonumber(other.minor) == tonumber(mine.minor) and tonumber(other.patch) > tonumber(mine.patch)) then
     mine.patch = other.patch
+    mine.suffix = other.suffix
+  elseif (tonumber(other.major) == tonumber(mine.major) and tonumber(other.minor) == tonumber(mine.minor) and tonumber(other.patch) == tonumber(mine.patch) and tonumber(other.suffix) > tonumber(mine.suffix)) then
+    mine.suffix = other.suffix
   end
 end
 
@@ -231,6 +301,10 @@ function OneVersion:RequireUpgrade(mine, other)
   end
 
   if tonumber(mine.patch) < tonumber(other.patch) then
+    return true
+  end
+
+  if tonumber(mine.suffix) < tonumber(other.suffix) then
     return true
   end
 
@@ -265,24 +339,27 @@ function OneVersion:GetAddonInfoFromMessage(msg)
     type = parts[3],
     major = parts[4],
     minor = parts[5],
-    patch = parts[6]
+    patch = parts[6],
+    suffix = parts[7]
   }
   return parts[1], t
 end
 
 function OneVersion:AddonInfoToMessage(name,addonInfo)
-  return name .. "|" .. addonInfo.label .. "|" .. addonInfo.type .. "|" .. addonInfo.mine.major .. "|" .. addonInfo.mine.minor .. "|" .. addonInfo.mine.patch
+  return string.format("%s|%s|%s|%d|%d|%d|%d", name, addonInfo.label, addonInfo.type, addonInfo.mine.major, addonInfo.mine.minor, addonInfo.mine.patch, addonInfo.mine.suffix)
+  --return name .. "|" .. addonInfo.label .. "|" .. addonInfo.type .. "|" .. addonInfo.mine.major .. "|" .. addonInfo.mine.minor .. "|" .. addonInfo.mine.patch .. "|" .. addonInfo.mine.suffix
 end
 
 -----------------------------------------------------------------------------------------------
 -- OneVersion OnAddonReportInfo
 -----------------------------------------------------------------------------------------------
-function OneVersion:OnAddonReportInfo(name, major, minor, patch, isLib)
+function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
   local addonInfo = self:GetBaseAddonInfo()
   local type = ""
+  local sufx = (suffix or 0)
 
   if self.settings.user.debug == true then
-    Utils:debug( name .. "|" .. major .. "|" .. minor .. "|" .. patch .. "|" .. tostring(isLib))
+    Utils:debug( string.format("%s|%d|%d|%d|%d|%s", name, major, minor, patch, sufx, tostring(isLib)) )
   end
 
   if isLib ~= nil and isLib == true then
@@ -299,6 +376,8 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, isLib)
   addonInfo.reported.minor = minor
   addonInfo.mine.patch = patch
   addonInfo.reported.patch = patch
+  addonInfo.mine.suffix = sufx
+  addonInfo.reported.suffix = sufx
   addonInfo.upgrade = false
 
   self.state.trackedAddons[name] = addonInfo

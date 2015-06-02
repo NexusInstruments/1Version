@@ -29,8 +29,8 @@ function OneVersion:ToggleDebug()
   end
 end
 
-function OneVersion:BuildVersionString(major, minor, patch)
-  return "" .. tostring(major) .. "." .. tostring(minor) .. "." .. tostring(patch)
+function OneVersion:BuildVersionString(major, minor, patch, suffix)
+  return string.format("%d.%d.%d%s", major, minor, patch, self.CodeEnumAddonSuffixMap[suffix])
 end
 
 
