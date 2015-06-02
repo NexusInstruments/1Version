@@ -354,15 +354,24 @@ end
 -- OneVersion OnAddonReportInfo
 -----------------------------------------------------------------------------------------------
 function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
-  local addonInfo = self:GetBaseAddonInfo()
-  local type = ""
-  local sufx = (suffix or 0)
-
-  if self.settings.user.debug == true then
-    Utils:debug( string.format("%s|%d|%d|%d|%d|%s", name, major, minor, patch, sufx, tostring(isLib)) )
+  -- Drop out if name isn't provided
+  if not name or name == ""
+    return
   end
 
-  if isLib ~= nil and isLib == true then
+  local addonInfo = self:GetBaseAddonInfo()
+
+  local type = ""
+  local minr = (minor or 0)
+  local ptch = (patch or 0)
+  local sufx = (suffix or 0)
+  local lib = (isLib or false)
+
+  if self.settings.user.debug == true then
+    Utils:debug( string.format("%s|%d|%d|%d|%d|%s", name, major, minr, ptch, sufx, tostring(lib)) )
+  end
+
+  if lib == true then
     type = "Library"
   else
     type = "Add-On"
@@ -372,10 +381,10 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
   addonInfo.type = type
   addonInfo.mine.major = major
   addonInfo.reported.major = major
-  addonInfo.mine.minor = minor
-  addonInfo.reported.minor = minor
-  addonInfo.mine.patch = patch
-  addonInfo.reported.patch = patch
+  addonInfo.mine.minor = minr
+  addonInfo.reported.minor = minr
+  addonInfo.mine.patch = ptch
+  addonInfo.reported.patch = ptch
   addonInfo.mine.suffix = sufx
   addonInfo.reported.suffix = sufx
   addonInfo.upgrade = false
