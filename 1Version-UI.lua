@@ -93,20 +93,27 @@ function OneVersion:CloseOptions()
 end
 
 ---------------------------------------------------------------------------------------------------
--- OneVersion UI Refresh
+-- OneVersion UI Location
 ---------------------------------------------------------------------------------------------------
-function OneVersion:RefreshUI()
-  -- Location Restore
+function OneVersion:RestoreLocations()
+  -- Main Location Restore
   if self.settings.positions.main ~= nil and self.settings.positions.main ~= {} then
     locSavedLoc = WindowLocation.new(self.settings.positions.main)
     self.state.windows.main:MoveToLocation(locSavedLoc)
   end
 
-  -- Location Restore
+  -- Alert Location Restore
   if self.settings.positions.alert ~= nil and self.settings.positions.alert ~= {} then
     local locSavedLoc = WindowLocation.new(self.settings.positions.alert)
     self.state.windows.alert:MoveToLocation(locSavedLoc)
   end
+end
+
+---------------------------------------------------------------------------------------------------
+-- OneVersion UI Refresh
+---------------------------------------------------------------------------------------------------
+function OneVersion:RefreshUI()
+  self:RestoreLocations()
 
   -- Set Enabled Flag
   self.state.windows.main:FindChild("EnabledButton"):SetCheck(self.settings.user.enabled)
