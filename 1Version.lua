@@ -89,7 +89,7 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 1, 2
+local Major, Minor, Patch, Suffix = 1, 1, 2, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -354,8 +354,8 @@ end
 -- OneVersion OnAddonReportInfo
 -----------------------------------------------------------------------------------------------
 function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
-  -- Drop out if name isn't provided
-  if not name or name == "" then
+  -- Drop out if name or major number isn't provided
+  if not name or not major or name == "" then
     return
   end
 
@@ -391,8 +391,14 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
 
   self.state.trackedAddons[name] = addonInfo
 
+  local player = GameLib.GetPlayerUnit()
+  local playerName = ""
+  if player then
+    playerName = player:GetName()
+  end
   self:RebuildAddonListItems()
-  self:BroadcastAddons(GameLib.GetPlayerUnit():GetName())
+
+  self:BroadcastAddons(playerName)
 end
 
 -----------------------------------------------------------------------------------------------
@@ -420,6 +426,10 @@ function OneVersion:OnRestore(eType, tSavedData)
     end
 
     -- This section is for converting between versions that saved data differently
+    if self.settings.version ~= ONEVERSION_CURRENT_VERSION then
+      -- reset main window position
+      self.settings.positions.main = nil
+    end
 
     -- Now that we've turned the save data into the most recent version, set it
     self.settings.version = ONEVERSION_CURRENT_VERSION

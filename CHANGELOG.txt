@@ -1,3 +1,8 @@
+# Version 1.1.2
+* Fixed Player Name bug when player was not yet loaded
+* Added sanity checking to reject add-on reporting when not major version is provided
+* Added check to reset main window position on new version
+
 # Version 1.1.1
 * Added reporting sanity checking
 * Allowed Minor and Patch values to be 0, these default to 0 if not passed.
