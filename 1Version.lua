@@ -89,7 +89,7 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 1, 1
+local Major, Minor, Patch, Suffix = 1, 1, 1, 2
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -355,7 +355,7 @@ end
 -----------------------------------------------------------------------------------------------
 function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
   -- Drop out if name isn't provided
-  if not name or name == ""
+  if not name or name == "" then
     return
   end
 
