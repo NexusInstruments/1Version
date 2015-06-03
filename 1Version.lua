@@ -89,7 +89,7 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 3, 0
+local Major, Minor, Patch, Suffix = 1, 1, 4, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -201,6 +201,7 @@ function OneVersion:OnDocLoaded()
 
   -- Rebuild List Items and refreshUI
   self.state.isLoaded = true
+  self:RestoreLocations()
   self:RebuildAddonListItems()
 end
 
