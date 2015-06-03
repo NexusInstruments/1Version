@@ -1,3 +1,6 @@
+# Version 1.1.3
+* Fixed a race condition bug where RebuildAddonList could be called before the XML document was initialized.
+
 # Version 1.1.2
 * Fixed Player Name bug when player was not yet loaded
 * Added sanity checking to reject add-on reporting when not major version is provided

@@ -89,7 +89,7 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 2, 1
+local Major, Minor, Patch, Suffix = 1, 1, 3, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -109,6 +109,7 @@ local tDefaultSettings = {
 local tDefaultState = {
   isOpen = false,
   isAlerted = false,
+  isLoaded = false,
   windows = {           -- These store windows for lists
     main = nil,
     options = nil,
@@ -198,8 +199,9 @@ function OneVersion:OnDocLoaded()
 
   Apollo.RegisterSlashCommand("onever", "OnSlashCommand", self)
 
-  -- Restore positions and junk
-  self:RefreshUI()
+  -- Rebuild List Items and refreshUI
+  self.state.isLoaded = true
+  self:RebuildAddonListItems()
 end
 
 -----------------------------------------------------------------------------------------------
@@ -270,7 +272,9 @@ function OneVersion:OnReceiveAddonInfo(chan, msg)
       self:ProcessLock()
     end
   end
-  self:RebuildAddonListItems()
+  if self.state.isLoaded == true then
+    self:RebuildAddonListItems()
+  end
 end
 
 function OneVersion:UpdateOther(mine, other)
@@ -396,7 +400,9 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
   if player then
     playerName = player:GetName()
   end
-  self:RebuildAddonListItems()
+  if self.state.isLoaded == true then
+    self:RebuildAddonListItems()
+  end
 
   self:BroadcastAddons(playerName)
 end
