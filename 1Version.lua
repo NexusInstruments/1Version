@@ -89,7 +89,7 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 2, 0
+local Major, Minor, Patch, Suffix = 1, 1, 2, 1
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
