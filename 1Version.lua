@@ -89,7 +89,7 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 4, 0
+local Major, Minor, Patch, Suffix = 1, 1, 5, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -169,8 +169,7 @@ function OneVersion:OnLoad()
   Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
 
   -- Setup Comms
-  self.shareChannel = ICCommLib.JoinChannel("OneVersion", ICCommLib.CodeEnumICCommChannelType.Group)
-  self.shareChannel:SetReceivedMessageFunction("OnReceiveAddonInfo", self)
+  self:UpdateCommChannel()
 
   -- When someone joins the group
   Apollo.RegisterEventHandler("Group_Add","OnGroupAdd", self)					-- ( name )
@@ -326,14 +325,14 @@ end
 
 function OneVersion:OnGroupJoin() -- I joined a group
   -- Broadcast a message to the channel announcing all addon versions.
-  local name = GameLib.GetPlayerUnit():GetName()
+  local name = self:GetPlayerName()
   self:BroadcastAddons(name)
 end
 
 function OneVersion:BroadcastAddons(name)
   for key,value in pairs(self.state.trackedAddons) do
     msg = self:AddonInfoToMessage(name, value)
-    self.shareChannel:SendMessage(msg)
+    self:SendMessage(msg)
   end
 end
 
@@ -354,6 +353,34 @@ function OneVersion:AddonInfoToMessage(name,addonInfo)
   return string.format("%s|%s|%s|%d|%d|%d|%d", name, addonInfo.label, addonInfo.type, addonInfo.mine.major, addonInfo.mine.minor, addonInfo.mine.patch, addonInfo.mine.suffix)
   --return name .. "|" .. addonInfo.label .. "|" .. addonInfo.type .. "|" .. addonInfo.mine.major .. "|" .. addonInfo.mine.minor .. "|" .. addonInfo.mine.patch .. "|" .. addonInfo.mine.suffix
 end
+
+-----------------------------------------------------------------------------------------------
+-- OneVersion Communication Logic
+-----------------------------------------------------------------------------------------------
+function OneVersion:UpdateCommChannel()
+  if not self.shareChannel then
+    self.shareChannel = ICCommLib.JoinChannel("OneVersion", ICCommLib.CodeEnumICCommChannelType.Group)
+  end
+
+  if self.shareChannel:IsReady() then
+    self.shareChannel:SetReceivedMessageFunction("OnReceiveAddonInfo", self)
+  else
+    -- Channel not ready yet, repeat in a few seconds
+    Apollo.CreateTimer("UpdateCommChannel", 1, false)
+    Apollo.StartTimer("UpdateCommChannel")
+  end
+end
+
+function OneVersion:SendMessage(msg)
+  if not self.shareChannel then
+      Print("[OneVersion] Error sending Addon info. Attempting to fix this now. If this issue persists, contact the developers")
+      self:UpdateCommChannel()
+      return false
+  else
+      self.shareChannel:SendMessage(msg)
+  end
+end
+
 
 -----------------------------------------------------------------------------------------------
 -- OneVersion OnAddonReportInfo
@@ -396,11 +423,7 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
 
   self.state.trackedAddons[name] = addonInfo
 
-  local player = GameLib.GetPlayerUnit()
-  local playerName = ""
-  if player then
-    playerName = player:GetName()
-  end
+  local playerName = self:GetPlayerName()
   if self.state.isLoaded == true then
     self:RebuildAddonListItems()
   end

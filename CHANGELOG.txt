@@ -1,3 +1,7 @@
+# Version 1.1.5
+* Changed Comm channel initialization to be more reliable
+* Fixed additional Player Name bug when player was not yet loaded but joining a group
+
 # Version 1.1.4
 * Fixed location restore bug when reloading addon
 

@@ -33,6 +33,14 @@ function OneVersion:BuildVersionString(major, minor, patch, suffix)
   return string.format("%d.%d.%d%s", major, minor, patch, self.CodeEnumAddonSuffixMap[suffix])
 end
 
+function OneVersion:GetPlayerName()
+  local player = GameLib.GetPlayerUnit()
+  local playerName = ""
+  if player then
+    playerName = player:GetName()
+  end
+  return playerName
+end
 
 function OneVersion:PrintParty(str)
   Utils:pprint("[OneVersion]: " .. str)
