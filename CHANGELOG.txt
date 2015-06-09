@@ -1,3 +1,12 @@
+# Version 1.2.0
+* Added additional checks to event reported data.
+* Fixed Comm channel initialization to be on a delay
+* Fixed Comm channel re-initialization to limit number of failed attempts before alerting and quiting
+* Added message queuing for when comm channel is not active
+* Fixed Timer event
+* Added Comm debug functions
+* Added DBPrint utilty function
+
 # Version 1.1.5
 * Changed Comm channel initialization to be more reliable
 * Fixed additional Player Name bug when player was not yet loaded but joining a group
