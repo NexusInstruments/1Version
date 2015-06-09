@@ -19,7 +19,6 @@ require "ICComm"
 -----------------------------------------------------------------------------------------------
 local OneVersion = {}
 local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
-local CommChannelTimer = nil
 
 -----------------------------------------------------------------------------------------------
 -- OneVersion Enums
