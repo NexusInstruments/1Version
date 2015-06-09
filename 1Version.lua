@@ -12,12 +12,14 @@
 require "Window"
 require "GroupLib"
 require "ChatSystemLib"
+require "ICComm"
 
 -----------------------------------------------------------------------------------------------
 -- OneVersion Module Definition
 -----------------------------------------------------------------------------------------------
 local OneVersion = {}
 local Utils = Apollo.GetPackage("SimpleUtils-1.0").tPackage
+local CommChannelTimer = nil
 
 -----------------------------------------------------------------------------------------------
 -- OneVersion Enums
@@ -89,7 +91,13 @@ OneVersion.CodeEnumAddonSuffixMap = {
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
-local Major, Minor, Patch, Suffix = 1, 1, 5, 0
+-- The number of attempts made to connect to Comm Channel before abandoning
+local CommAttemptDelay = 3 -- The delay between attempts to load channel
+local MaxCommAttempts = 10 -- The number of attempts made to connect to Comm Channel before abandoning
+local CommChannelName = "OneVersion" -- The channel name
+local CommChannelTimer = nil
+
+local Major, Minor, Patch, Suffix = 1, 2, 0, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -120,7 +128,13 @@ local tDefaultState = {
   listItems = {         -- These store windows for lists
     addons = {},
   },
-  trackedAddons = {}
+  channel = {
+    attemptsCount = 0,
+    timerActive = false,
+    ready = false
+  },
+  trackedAddons = {},
+  messageQueue = {}
 }
 
 
@@ -164,12 +178,10 @@ function OneVersion:OnLoad()
 
   self.xmlDoc = XmlDoc.CreateFromFile("1Version.xml")
   self.xmlDoc:RegisterCallback("OnDocLoaded", self)
+  self.state.timerActive = true
 
   Apollo.RegisterEventHandler("Generic_ToggleOneVersion", "OnToggleOneVersion", self)
   Apollo.RegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
-
-  -- Setup Comms
-  self:UpdateCommChannel()
 
   -- When someone joins the group
   Apollo.RegisterEventHandler("Group_Add","OnGroupAdd", self)					-- ( name )
@@ -187,6 +199,8 @@ function OneVersion:OnDocLoaded()
     return
   end
 
+  self.shareChannel = nil
+
   self.state.windows.main = Apollo.LoadForm(self.xmlDoc, "OneVersionWindow", nil, self)
   self.state.windows.addonList = self.state.windows.main:FindChild("ItemList")
 
@@ -197,6 +211,10 @@ function OneVersion:OnDocLoaded()
   self.state.windows.alert:Show(false)
 
   Apollo.RegisterSlashCommand("onever", "OnSlashCommand", self)
+
+  -- Setup Comms
+  Apollo.RegisterTimerHandler("OneVersion_UpdateCommChannel", "UpdateCommChannel", self)
+  CommChannelTimer = ApolloTimer.Create(5, false, "UpdateCommChannel", self) -- make sure everything is loaded, so after 5sec
 
   -- Rebuild List Items and refreshUI
   self.state.isLoaded = true
@@ -217,13 +235,21 @@ function OneVersion:OnSlashCommand(cmd, params)
     self:OnToggleOneVersion()
   elseif args[1] == "defaults" then
     self:LoadDefaults()
+  elseif args[1] == "rejoin" then
+    self.state.shareChannel = nil
+    self.state.channel.attemptsCount = 0
+    self:UpdateCommChannel()
+  elseif args[1] == "broadcast" then
+    self:BroadcastAddons(self:GetPlayerName())
   else
     Utils:cprint("OneVersion v" .. self.settings.version)
     Utils:cprint("Usage:  /onever <command>")
-    Utils:cprint("====================================")
+    Utils:cprint("============================================")
     Utils:cprint("   show           Open Rules Window")
     Utils:cprint("   debug          Toggle Debug")
-    --Utils:cprint("   defaults       Loads defaults")
+    Utils:cprint("   defaults       Loads defaults")
+    Utils:cprint("   rejoin         Force rejoin comms channel")
+    Utils:cprint("   broadcast      Force broadcast addons")
   end
 end
 
@@ -242,39 +268,6 @@ end
 -----------------------------------------------------------------------------------------------
 function OneVersion:ProcessOptions()
 
-end
-
------------------------------------------------------------------------------------------------
--- OneVersion OnReceiveAddonInfo
------------------------------------------------------------------------------------------------
-function OneVersion:OnReceiveAddonInfo(chan, msg)
-  if self.settings.user.debug == true then
-    Utils:debug(msg)
-  end
-
-  -- Read addon information
-  local name,addon = self:GetAddonInfoFromMessage(msg)
-  local alertRequired = false
-
-  -- Update addon and check/compare version info
-  -- Only update addons we're already watching
-  if self.state.trackedAddons[addon.label] then
-    self:UpdateOther(self.state.trackedAddons[addon.label].reported, addon)
-    local upgrade = self:RequireUpgrade(self.state.trackedAddons[addon.label].mine, self.state.trackedAddons[addon.label].reported)
-    self.state.trackedAddons[addon.label].upgrade = upgrade
-    if upgrade then
-      alertRequired = true
-    end
-
-    if alertRequired and self.state.windows.alert == nil then
-      self.state.isAlerted = alertRequired
-      self:ShowAlert()
-      self:ProcessLock()
-    end
-  end
-  if self.state.isLoaded == true then
-    self:RebuildAddonListItems()
-  end
 end
 
 function OneVersion:UpdateOther(mine, other)
@@ -355,33 +348,104 @@ function OneVersion:AddonInfoToMessage(name,addonInfo)
 end
 
 -----------------------------------------------------------------------------------------------
+-- OneVersion OnReceiveAddonInfo
+-----------------------------------------------------------------------------------------------
+function OneVersion:OnReceiveAddonInfo(chan, msg)
+  self:DBPrint("(ReceiveMessage) " .. msg)
+
+  -- Read addon information
+  local name,addon = self:GetAddonInfoFromMessage(msg)
+  local alertRequired = false
+
+  -- Update addon and check/compare version info
+  -- Only update addons we're already watching
+  if self.state.trackedAddons[addon.label] then
+    self:UpdateOther(self.state.trackedAddons[addon.label].reported, addon)
+    local upgrade = self:RequireUpgrade(self.state.trackedAddons[addon.label].mine, self.state.trackedAddons[addon.label].reported)
+    self.state.trackedAddons[addon.label].upgrade = upgrade
+    if upgrade then
+      alertRequired = true
+    end
+
+    if alertRequired and self.state.windows.alert == nil then
+      self.state.isAlerted = alertRequired
+      self:ShowAlert()
+      self:ProcessLock()
+    end
+  end
+  if self.state.isLoaded == true then
+    self:RebuildAddonListItems()
+  end
+end
+
+-----------------------------------------------------------------------------------------------
 -- OneVersion Communication Logic
 -----------------------------------------------------------------------------------------------
 function OneVersion:UpdateCommChannel()
   if not self.shareChannel then
-    self.shareChannel = ICCommLib.JoinChannel("OneVersion", ICCommLib.CodeEnumICCommChannelType.Group)
+    self:DBPrint(" InitComms")
+    self.shareChannel = ICCommLib.JoinChannel(CommChannelName, ICCommLib.CodeEnumICCommChannelType.Group)
+    self.shareChannel:SetJoinResultFunction("OnCommJoin", self)
   end
 
   if self.shareChannel:IsReady() then
+    self:DBPrint(" Channel is ready." )
     self.shareChannel:SetReceivedMessageFunction("OnReceiveAddonInfo", self)
+    self.shareChannel:SetSendMessageResultFunction("OnMessageSent", self)
+    self.shareChannel:SetThrottledFunction("OnChannelThrottle", self)
+    self.state.channel.ready = true
+
+    -- Check the message queue and push waiting messages
+    while #self.state.messageQueue > 0 do
+      self:SendMessage(self.state.messageQueue[1])
+      table.remove(self.state.messageQueue, 1)
+    end
   else
+    self:DBPrint(" Channel is not ready, retrying.")
     -- Channel not ready yet, repeat in a few seconds
-    Apollo.CreateTimer("UpdateCommChannel", 1, false)
-    Apollo.StartTimer("UpdateCommChannel")
+    if self.state.channel.attemptsCount < MaxCommAttempts then
+      self.state.timerActive = true
+      Apollo.CreateTimer("OneVersion_UpdateCommChannel", CommAttemptDelay, false)
+      Apollo.StartTimer("OneVersion_UpdateCommChannel")
+    else
+      -- Comms disabled, send alert
+      self.state.timerActive = false
+      Utils:cprint("[OneVersion] Could not initialize comm channel.  Group Comm channels appear to be disabled -- please open a ticket with Carbine.")
+    end
+    -- Increment the number of attempts
+    self.state.channel.attemptsCount = self.state.channel.attemptsCount + 1
   end
 end
 
 function OneVersion:SendMessage(msg)
-  if not self.shareChannel then
-      Print("[OneVersion] Error sending Addon info. Attempting to fix this now. If this issue persists, contact the developers")
+  self:DBPrint("(SendMessage) " .. msg )
+  if not self.shareChannel or not self.state.channel.ready then
+    -- Reinitialize only if the timer is not active
+    if not self.state.timerActive then
+      self:DBPrint(" Error sending Addon info. Attempting to fix this now.")
+      -- Attempt to re-initialize chanel
+      self.state.channel.attemptsCount = 0
       self:UpdateCommChannel()
-      return false
+    end
+    -- Queue the message
+    table.insert(self.state.messageQueue, msg)
+    return false
   else
-      self.shareChannel:SendMessage(msg)
+    return self.shareChannel:SendMessage(msg)
   end
 end
 
+function OneVersion:OnCommJoin(channel, eResult)
+  self:DBPrint( string.format("(JoinResult) %s:%s", channel:GetName(), tostring(eResult)) )
+end
 
+function OneVersion:OnMessageSent(channel, eResult, idMessage)
+  self:DBPrint( string.format("(MessageResult) %s:%s", channel:GetName(), tostring(eResult)) )
+end
+
+function OneVersion:OnChannelThrottle(channel, strSender, idMessage)
+  self:DBPrint( string.format("(ChannelThrottle) %s:%s:%s", channel:GetName(), strSender, tostring(idMessage) ) )
+end
 -----------------------------------------------------------------------------------------------
 -- OneVersion OnAddonReportInfo
 -----------------------------------------------------------------------------------------------
@@ -393,24 +457,25 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
 
   local addonInfo = self:GetBaseAddonInfo()
 
-  local type = ""
-  local minr = (minor or 0)
-  local ptch = (patch or 0)
-  local sufx = (suffix or 0)
+  local atype = ""
+  local minr = (tonumber(minor) or 0)
+  local ptch = (tonumber(patch) or 0)
+  local sufx = (tonumber(suffix) or 0)
+  if type(isLib) == "boolean" then
+    isLib = false
+  end
   local lib = (isLib or false)
 
-  if self.settings.user.debug == true then
-    Utils:debug( string.format("%s|%d|%d|%d|%d|%s", name, major, minr, ptch, sufx, tostring(lib)) )
-  end
+  self:DBPrint( "(AddonReport) " .. string.format("%s|%d|%d|%d|%d|%s", name, major, minr, ptch, sufx, tostring(lib)) )
 
   if lib == true then
-    type = "Library"
+    atype = "Library"
   else
-    type = "Add-On"
+    atype = "Add-On"
   end
 
   addonInfo.label = name
-  addonInfo.type = type
+  addonInfo.type = atype
   addonInfo.mine.major = major
   addonInfo.reported.major = major
   addonInfo.mine.minor = minr
@@ -466,6 +531,12 @@ function OneVersion:OnRestore(eType, tSavedData)
 
   else
     self.tConfig = deepcopy(tDefaultOptions)
+  end
+end
+
+function OneVersion:DBPrint(msg)
+  if self.settings.user.debug then
+    Utils:debug( "[OneVersion]" .. msg )
   end
 end
 
