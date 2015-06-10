@@ -1,3 +1,8 @@
+# Version 1.3.0
+* Added Interface menu alert to indicate out of data add-ons
+* Fixed bugs with alert window not showing up
+* Fixed minor sanity check bug
+
 # Version 1.2.0
 * Added additional checks to event reported data.
 * Fixed Comm channel initialization to be on a delay

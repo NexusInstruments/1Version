@@ -56,6 +56,7 @@ OneVersion.CodeEnumAddonSuffixLevel = {
 }
 
 OneVersion.CodeEnumAddonSuffixMap = {
+  ["0"] = "",  -- To account for LUA stupidity with indexing the zero-index
   [-2] = "α",
   [-1] = "β",
   [0] = "",
@@ -87,6 +88,13 @@ OneVersion.CodeEnumAddonSuffixMap = {
   [26] = "z"
 }
 
+OneVersion.CommInfo = {
+  CommAttemptDelay = 3,           -- The delay between attempts to load channel
+  MaxCommAttempts = 10,           -- The number of attempts made to connect to Comm Channel before abandoning
+  CommChannelName = "OneVersion", -- The channel name
+  CommChannelTimer = nil
+}
+
 -----------------------------------------------------------------------------------------------
 -- OneVersion constants
 -----------------------------------------------------------------------------------------------
@@ -96,7 +104,7 @@ local MaxCommAttempts = 10 -- The number of attempts made to connect to Comm Cha
 local CommChannelName = "OneVersion" -- The channel name
 local CommChannelTimer = nil
 
-local Major, Minor, Patch, Suffix = 1, 2, 0, 0
+local Major, Minor, Patch, Suffix = 1, 3, 0, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
@@ -133,7 +141,8 @@ local tDefaultState = {
     ready = false
   },
   trackedAddons = {},
-  messageQueue = {}
+  messageQueue = {},
+  updateCount = 0
 }
 
 
@@ -366,14 +375,23 @@ function OneVersion:OnReceiveAddonInfo(chan, msg)
       alertRequired = true
     end
 
-    if alertRequired and self.state.windows.alert == nil then
-      self.state.isAlerted = alertRequired
+    if alertRequired then
+      self.state.isAlerted = true
       self:ShowAlert()
       self:ProcessLock()
     end
   end
   if self.state.isLoaded == true then
     self:RebuildAddonListItems()
+  end
+end
+
+function OneVersion:RecalculateOutdatedCount()
+  self.state.updateCount = 0
+  for k,v in pairs(self.state.trackedAddons) do
+    if v.upgrade == true then
+      self.state.updateCount = self.state.updateCount + 1
+    end
   end
 end
 
@@ -430,6 +448,7 @@ function OneVersion:SendMessage(msg)
     table.insert(self.state.messageQueue, msg)
     return false
   else
+    self:DBPrint("(Sent)")
     return self.shareChannel:SendMessage(msg)
   end
 end
@@ -460,7 +479,7 @@ function OneVersion:OnAddonReportInfo(name, major, minor, patch, suffix, isLib)
   local minr = (tonumber(minor) or 0)
   local ptch = (tonumber(patch) or 0)
   local sufx = (tonumber(suffix) or 0)
-  if type(isLib) == "boolean" then
+  if type(isLib) ~= "boolean" then
     isLib = false
   end
   local lib = (isLib or false)
