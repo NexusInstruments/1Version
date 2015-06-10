@@ -30,13 +30,19 @@ function OneVersion:ToggleDebug()
 end
 
 function OneVersion:BuildVersionString(major, minor, patch, suffix)
-  return string.format("%d.%d.%d%s", major, minor, patch, self.CodeEnumAddonSuffixMap[suffix])
+  -- This is a stupid fix to get around the LUA zero-index stupidity
+  local sfx = (suffix or 0)
+  if sfx == 0 then
+    sfx = tostring(sfx)
+  end
+  local strVer = string.format("%d.%d.%d%s", major, minor, patch, OneVersion.CodeEnumAddonSuffixMap[sfx])
+  return strVer
 end
 
 function OneVersion:GetPlayerName()
   local player = GameLib.GetPlayerUnit()
   local playerName = ""
-  if player then
+  if player ~= nil then
     playerName = player:GetName()
   end
   return playerName

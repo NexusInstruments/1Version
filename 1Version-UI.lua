@@ -28,6 +28,10 @@ function OneVersion:OnToggleOneVersion()
   else
     self.state.isOpen = true
     self.state.windows.main:Invoke() -- show the window
+    if self.state.isAlerted == true then
+      self:CloseAlert()
+      self.state.isAlerted = false
+    end
   end
 end
 
@@ -120,6 +124,13 @@ function OneVersion:RefreshUI()
 
   -- Sort List Items
   self.state.windows.addonList:ArrangeChildrenVert()
+
+  self:RecalculateOutdatedCount()
+  if self.state.updateCount > 0 then
+    Event_FireGenericEvent("InterfaceMenuList_AlertAddOn", "OneVersion", {true, nil, self.state.updateCount})
+  else
+    Event_FireGenericEvent("InterfaceMenuList_AlertAddOn", "OneVersion", {false, nil, nil})
+  end
 end
 
 function OneVersion:ShowAlert()
