@@ -45,7 +45,27 @@ function OneVersion:GetPlayerName()
   if player ~= nil then
     playerName = player:GetName()
   end
-  return playerName
+
+  if playerName ~= nil then
+    return playerName
+  end
+
+  return ""
+end
+
+function OneVersion:Bool2Bit(b)
+  if type(b) == "boolean" then
+    if b then
+      return 1
+    end
+  end
+  return 0
+end
+
+function OneVersion:AddonSort(a,b)
+  local a_str = tostring(self:Bool2Bit(a.upgrade)) .. a.label
+  local b_str = tostring(self:Bool2Bit(b.upgrade)) .. b.label
+  return a_str < b_str
 end
 
 function OneVersion:PrintParty(str)
