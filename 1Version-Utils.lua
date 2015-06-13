@@ -53,7 +53,13 @@ function OneVersion:GetPlayerName()
   return ""
 end
 
-function OneVersion:Bool2Bit(b)
+function OneVersion:BuildSortableTable(t)
+  local u = {}
+  for k,v in pairs(t) do table.insert(u, v) end
+  return u
+end
+
+function OneVersion.BoolBit(b)
   if type(b) == "boolean" then
     if b then
       return 1
@@ -62,9 +68,11 @@ function OneVersion:Bool2Bit(b)
   return 0
 end
 
-function OneVersion:AddonSort(a,b)
-  local a_str = tostring(self:Bool2Bit(a.upgrade)) .. a.label
-  local b_str = tostring(self:Bool2Bit(b.upgrade)) .. b.label
+function OneVersion.AddonSort(a,b)
+  local a_bool = OneVersion.BoolBit(a.upgrade)
+  local b_bool = OneVersion.BoolBit(b.upgrade)
+  local a_str = tostring(a_bool) .. a.label
+  local b_str = tostring(b_bool) .. b.label
   return a_str < b_str
 end
 

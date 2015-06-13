@@ -217,11 +217,19 @@ end
 
 function OneVersion:RebuildAddonListItems()
   local vScrollPos = self.state.windows.addonList:GetVScrollPos()
+  local tAddons = {}
   self:SaveLocation()
   self:ClearAddonListItem()
-  table.sort(self.state.trackedAddons, self.AddonSort)
-  for key,item in pairs(self.state.trackedAddons) do
-    self:AddAddonListItem(key, item)
+  tAddons = self:BuildSortableTable(self.state.trackedAddons)
+  for i,v in ipairs(tAddons) do
+    Utils:debug(string.format("%d:%s",i,v.label))
+  end
+  table.sort(tAddons, OneVersion.AddonSort)
+  for i,v in ipairs(tAddons) do
+    Utils:debug(string.format("%d:%s",i,v.label))
+  end
+  for idx,item in ipairs(tAddons) do
+    self:AddAddonListItem(item.label, item)
   end
   self.state.windows.addonList:SetVScrollPos(vScrollPos)
   self:RefreshUI()
