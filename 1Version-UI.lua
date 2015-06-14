@@ -221,13 +221,7 @@ function OneVersion:RebuildAddonListItems()
   self:SaveLocation()
   self:ClearAddonListItem()
   tAddons = self:BuildSortableTable(self.state.trackedAddons)
-  for i,v in ipairs(tAddons) do
-    Utils:debug(string.format("%d:%s",i,v.label))
-  end
   table.sort(tAddons, OneVersion.AddonSort)
-  for i,v in ipairs(tAddons) do
-    Utils:debug(string.format("%d:%s",i,v.label))
-  end
   for idx,item in ipairs(tAddons) do
     self:AddAddonListItem(item.label, item)
   end
