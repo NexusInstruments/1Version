@@ -69,8 +69,8 @@ function OneVersion.BoolBit(b)
 end
 
 function OneVersion.AddonSort(a,b)
-  local a_bool = OneVersion.BoolBit(a.upgrade)
-  local b_bool = OneVersion.BoolBit(b.upgrade)
+  local a_bool = OneVersion.BoolBit(not a.upgrade)
+  local b_bool = OneVersion.BoolBit(not b.upgrade)
   local a_str = tostring(a_bool) .. a.label
   local b_str = tostring(b_bool) .. b.label
   return a_str < b_str
