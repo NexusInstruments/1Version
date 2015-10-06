@@ -104,7 +104,7 @@ local MaxCommAttempts = 10 -- The number of attempts made to connect to Comm Cha
 local CommChannelName = "OneVersion" -- The channel name
 local CommChannelTimer = nil
 
-local Major, Minor, Patch, Suffix = 1, 4, 0, 1
+local Major, Minor, Patch, Suffix = 1, 5, 0, 0
 local ONEVERSION_CURRENT_VERSION = string.format("%d.%d.%d%s", Major, Minor, Patch, OneVersion.CodeEnumAddonSuffixMap[Suffix])
 
 local tDefaultSettings = {
