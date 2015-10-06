@@ -1,3 +1,6 @@
+# Version 1.5.0
+* Updated API Version to 11
+
 # Version 1.4.0
 * Fixed rare login bug with nil playerName not converted to ""
 * Added Sorting of tracked add-ons. Add-ons are sorted first by if they need to be upgraded and then alphabetically
